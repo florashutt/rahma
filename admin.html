@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MobaXterm - Admin Dashboard</title>
+    <style>
+        /* CSS Reset & Variabel */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #cccccc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Top Toolbar */
+        .top-bar { background-color: #000000; display: flex; justify-content: space-between; padding: 5px 10px; border-bottom: 1px solid #333; height: 60px; }
+        .toolbar-group { display: flex; align-items: center; gap: 15px; }
+        .toolbar-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; color: #ccc; cursor: pointer; font-size: 11px; font-family: inherit; }
+        .toolbar-btn:hover { color: #fff; }
+        .toolbar-btn .icon { font-size: 20px; margin-bottom: 3px; }
+        
+        /* Ikon Khusus */
+        .btn-tunnel { color: #3b82f6; }
+        .btn-tunnel.active { color: #ef4444; }
+        .btn-exit { color: #ef4444; }
+        
+        /* Layout Utama */
+        .main-layout { display: flex; flex: 1; height: calc(100vh - 60px); }
+        
+        /* Sidebar Kiri (SFTP Browser) */
+        .sidebar { width: 250px; background-color: #252526; border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 8px; background-color: #333333; font-size: 12px; display: flex; align-items: center; gap: 5px; border-bottom: 1px solid #444; }
+        .sidebar-path { background-color: #1e1e1e; padding: 5px; border: 1px solid #444; width: 100%; color: #ccc; font-size: 12px; }
+        .folder-list { padding: 10px; list-style: none; overflow-y: auto; flex: 1; }
+        .folder-item { padding: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; border-radius: 3px; }
+        .folder-item:hover { background-color: #37373d; }
+        .folder-item.active { background-color: #04395e; color: #fff; }
+        .folder-icon { color: #eab308; font-size: 16px; }
+        
+        /* Area Kanan (Workspace) */
+        .workspace { flex: 1; display: flex; flex-direction: column; background-color: #1e1e1e; }
+        
+        /* Tab Headers */
+        .tabs-header { display: flex; background-color: #2d2d2d; border-bottom: 1px solid #444; }
+        .tab-btn { padding: 8px 15px; background-color: #2d2d2d; border: none; border-right: 1px solid #444; color: #aaa; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+        .tab-btn:hover { background-color: #333; }
+        .tab-btn.active { background-color: #1e1e1e; color: #fff; border-top: 2px solid #3b82f6; }
+        
+        /* Tab Content */
+        .tab-content { flex: 1; display: none; padding: 10px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        
+        /* Tema Terminal (Beranda) */
+        .terminal { font-family: 'Courier New', Courier, monospace; background-color: #000; color: #22c55e; padding: 15px; height: 100%; overflow-y: auto; font-size: 14px; }
+        .terminal .host { color: #3b82f6; font-weight: bold; }
+        .terminal .neofetch-ascii { color: #3b82f6; white-space: pre; float: left; margin-right: 20px; font-weight: bold;}
+        .terminal .neofetch-info { overflow: hidden; }
+        .terminal .highlight { color: #fff; font-weight: bold; }
+        
+        /* Footer */
+        .footer { background-color: #007acc; color: white; font-size: 11px; padding: 2px 10px; display: flex; justify-content: space-between; }
+    
+        /* --- TAMBAHAN CSS UNTUK KONTEN TAB --- */
+        
+        /* Cards UI untuk TextWeb */
+        .card-container { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+        .card { background-color: #252526; border: 1px solid #333; border-radius: 4px; padding: 15px; width: 100%; max-width: 450px; }
+        .card-title { color: #3b82f6; font-size: 14px; margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 8px; font-weight: bold; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 5px; }
+        .form-input { width: 100%; background-color: #1e1e1e; border: 1px solid #444; color: #ccc; padding: 8px; border-radius: 3px; font-family: inherit; font-size: 13px; }
+        .form-input:focus { outline: none; border-color: #3b82f6; }
+        textarea.form-input { resize: vertical; min-height: 80px; }
+        .btn-save { background-color: #04395e; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; transition: 0.2s; }
+        .btn-save:hover { background-color: #3b82f6; }
+
+        /* Grid UI untuk Gallery */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
+        .gallery-item { background-color: #2d2d2d; border: 1px solid #444; border-radius: 4px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; flex-direction: column; }
+        .gallery-item span { font-size: 40px; color: #555; }
+        .gallery-name { font-size: 10px; margin-top: 10px; color: #888; word-break: break-all; padding: 0 5px; text-align: center; }
+        .upload-card { border: 2px dashed #555; cursor: pointer; background-color: transparent; }
+        .upload-card:hover { border-color: #3b82f6; }
+        .upload-card:hover span, .upload-card:hover .gallery-name { color: #3b82f6; }
+
+        /* UI untuk PicWeb */
+        .pw-section { background-color: #252526; border: 1px dashed #555; padding: 15px; margin-bottom: 15px; border-radius: 4px; }
+        .pw-title { font-size: 13px; color: #aaa; margin-bottom: 10px; }
+        .pw-flex { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .pw-img-slot { width: 70px; height: 70px; background-color: #1e1e1e; border: 1px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
+        .pw-img-slot.box { border-radius: 4px; width: 100px; height: 70px; }
+        .btn-swap { position: absolute; bottom: -5px; right: -5px; background: #eab308; color: #000; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .btn-add { background: #22c55e; color: #000; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 18px; display: flex; align-items: center; justify-content: center; height: 70px; width: 50px; opacity: 0.7; }
+        .btn-add:hover { opacity: 1; }
+
+        /* Slider Kompetensi & PKL */
+        .slider-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
+        .slider-box { border: 1px solid #444; background-color: #1a1a1c; padding: 15px; border-radius: 6px; width: 340px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+        .slider-header { font-size: 11px; font-weight: bold; color: #3b82f6; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: 1px; }
+        .slider-dots { font-size: 9px; color: #666; letter-spacing: 2px; }
+        .slider-body { display: flex; align-items: center; gap: 10px; }
+        .btn-slide { background: #2d2d2d; color: #aaa; border: 1px solid #444; border-radius: 4px; padding: 25px 8px; cursor: pointer; transition: 0.2s; }
+        .btn-slide:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .slide-items { display: flex; gap: 10px; flex: 1; overflow: hidden; justify-content: center; }
+        .pw-img-slot.empty-slot { border: 1px dashed #555; background: transparent; color: #555; }
+
+        /* --- TAMBAHAN CSS UNTUK TEXTWEB YANG DIPERBAIKI --- */
+        .card-full { max-width: 100%; }
+        .card-half { max-width: calc(50% - 10px); }
+        .card-third { max-width: calc(33.333% - 14px); }
+
+        /* Skill Row Editor */
+        .skill-editor-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 12px; }
+        .skill-editor-row .form-group { margin-bottom: 0; flex: 1; }
+        .skill-editor-row .form-group.pct { max-width: 80px; }
+        .btn-remove-skill { background: #ef4444; color: #fff; border: none; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; font-size: 14px; flex-shrink: 0; margin-bottom: 1px; transition: 0.2s; }
+        .btn-remove-skill:hover { background: #dc2626; }
+        .btn-add-skill { background: none; border: 1px dashed #444; color: #888; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; }
+        .btn-add-skill:hover { border-color: #3b82f6; color: #3b82f6; }
+
+        /* Bullet List Editor */
+        .bullet-editor { display: flex; flex-direction: column; gap: 8px; }
+        .bullet-row { display: flex; gap: 8px; align-items: center; }
+        .bullet-row .form-input { flex: 1; }
+        .bullet-dot { width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; }
+        .btn-remove-bullet { background: none; border: none; color: #666; cursor: pointer; font-size: 14px; padding: 4px; flex-shrink: 0; }
+        .btn-remove-bullet:hover { color: #ef4444; }
+        .btn-add-bullet { background: none; border: 1px dashed #444; color: #888; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-top: 4px; transition: 0.2s; }
+        .btn-add-bullet:hover { border-color: #3b82f6; color: #3b82f6; }
+
+        /* Sertifikat Editor */
+        .cert-editor-row { background: #1a1a1c; border: 1px solid #333; border-radius: 4px; padding: 12px; margin-bottom: 12px; }
+        .cert-editor-row .form-group { margin-bottom: 10px; }
+        .cert-editor-row .form-group:last-of-type { margin-bottom: 8px; }
+        .cert-editor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: #888; font-weight: bold; }
+
+        /* Section divider di TextWeb */
+        .textweb-divider { width: 100%; max-width: 100%; height: 1px; background: #333; margin: 8px 0; }
+        .textweb-section-label { width: 100%; max-width: 100%; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #555; padding: 4px 0; }
+
+        /* Toast notification */
+        .toast { position: fixed; bottom: 40px; right: 20px; background: #22c55e; color: #000; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; z-index: 9999; opacity: 0; transform: translateY(20px); transition: all 0.3s ease; pointer-events: none; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Scrollbar styling */
+        .tab-content::-webkit-scrollbar { width: 8px; }
+        .tab-content::-webkit-scrollbar-track { background: #1e1e1e; }
+        .tab-content::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .tab-content::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">✅ Berhasil disimpan!</div>
+
+    <!-- Top Toolbar -->
+    <header class="top-bar">
+        <div class="toolbar-group">
+            <button class="toolbar-btn"><span class="icon">💻</span>Session</button>
+            <button class="toolbar-btn"><span class="icon">🖥️</span>Servers</button>
+            <button class="toolbar-btn"><span class="icon">🧰</span>Tools</button>
+            <button class="toolbar-btn btn-tunnel" id="btnMaintenance" onclick="toggleMaintenance()">
+                <span class="icon">🔀</span><span id="maintenanceText">Tunneling (ON)</span>
+            </button>
+        </div>
+        <div class="toolbar-group">
+            <button class="toolbar-btn"><span class="icon">⚙️</span>Settings</button>
+            <button class="toolbar-btn btn-exit" onclick="alert('Proses Logout...')">
+                <span class="icon">⏻</span>Exit
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        
+        <!-- Sidebar Kiri -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>📁</span> <span>Sftp browser</span>
+            </div>
+            <div style="padding: 5px;">
+                <input type="text" class="sidebar-path" value="/var/www/html/portfolio/" readonly>
+            </div>
+            <ul class="folder-list">
+                <li class="folder-item active" onclick="openTab('Beranda', this)">
+                    <span class="folder-icon">📁</span> Beranda/
+                </li>
+                <li class="folder-item" onclick="openTab('PicWeb', this)">
+                    <span class="folder-icon">📁</span> PicWeb/
+                </li>
+                <li class="folder-item" onclick="openTab('TextWeb', this)">
+                    <span class="folder-icon">📁</span> TextWeb/
+                </li>
+                <li class="folder-item" onclick="openTab('Gallery', this)">
+                    <span class="folder-icon">📁</span> Gallery/
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Area Kanan -->
+        <main class="workspace">
+            
+            <!-- Tab Headers -->
+            <div class="tabs-header" id="tabHeaders">
+                <button class="tab-btn active" id="tabHead-Beranda">
+                    <span>🐧</span> 1. 10.10.10.65 (root)
+                </button>
+            </div>
+
+            <!-- ==================== BERANDA ==================== -->
+            <div class="tab-content active" id="tab-Beranda">
+                <div class="terminal">
+                    <div style="margin-bottom: 20px;">
+                        Debian GNU/Linux 12 (bookworm)<br>
+                        Last login: <span id="time"></span> from 192.168.1.10<br>
+                    </div>
+                    
+                    <span class="host">root@bintangizzra:</span><span style="color:white">~#</span> neofetch<br><br>
+                    
+                    <div class="neofetch-ascii">
+       _,met$$$$$gg.
+    ,g$$$$$$$$$$$$$$$P.
+  ,g$$P"     """Y$$.".
+ ,$$P'              `$$$.
+',$$P       ,ggs.     `$$b:
+`d$$'     ,$P"'   .    $$$  $$P      d$'     ,    $$P
+ $$:      $$.   -    ,d$$'
+ $$;      Y$b._   _,d$P'
+ Y$$.    `.`"Y$$$$P"'
+ `$$b      "-.__
+  `Y$$    `Y$$.
+     `$$b.
+       `Y$$b.
+          `"Y$b._
+              `"""
+                    </div>
+                    <div class="neofetch-info">
+                        <span class="host">root@bintangizzra</span><br>
+                        -------------------<br>
+                        <span class="host">OS:</span> Debian GNU/Linux 12 x86_64<br>
+                        <span class="host">Host:</span> Proxmox VE Virtual Machine<br>
+                        <span class="host">Kernel:</span> 6.1.0-9-amd64<br>
+                        <span class="host">Uptime:</span> 12 days, 4 hours, 21 mins<br>
+                        <span class="host">Packages:</span> 482 (dpkg)<br>
+                        <span class="host">Shell:</span> bash 5.2.15<br>
+                        <span class="host">Welcome:</span> <span class="highlight">Selamat datang Bintang! Sistem berjalan normal.</span><br>
+                    </div>
+                    
+                    <div style="clear: both; margin-top: 20px;">
+                        <span class="host">root@bintangizzra:</span><span style="color:white">~#</span> <span class="cursor" style="display:inline-block; width:8px; height:15px; background-color:#22c55e; animation: blink 1s infinite;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== PICWEB ==================== -->
+            <div class="tab-content" id="tab-PicWeb">
+                <div style="padding: 15px;">
+                    <h2 style="font-size: 16px; margin-bottom: 20px; color: #fff;">🖼️ Visual Image Editor</h2>
+                    
+                    <div class="pw-section">
+                        <div class="pw-title">Section: Branding (Tetap)</div>
+                        <div class="pw-flex">
+                            <div class="pw-img-slot" title="Navbar Logo">👤 <button class="btn-swap">⇄</button></div>
+                            <div class="pw-img-slot box" style="width: 200px;" title="Profile Picture">About Me <button class="btn-swap">⇄</button></div>
+                        </div>
+                    </div>
+
+                    <div class="pw-section">
+                        <div class="pw-title">Section: Kompetensi (Gallery Slider)</div>
+                        <div class="slider-container">
+                            <div class="slider-box">
+                                <div class="slider-header"><span>🌐 Network</span> <span class="slider-dots">● ○ ○</span></div>
+                                <div class="slider-body">
+                                    <button class="btn-slide">◄</button>
+                                    <div class="slide-items">
+                                        <div class="pw-img-slot box">Foto 1<button class="btn-swap">⇄</button></div>
+                                        <div class="pw-img-slot box">Foto 2<button class="btn-swap">⇄</button></div>
+                                    </div>
+                                    <button class="btn-slide">►</button>
+                                </div>
+                            </div>
+                            <div class="slider-box">
+                                <div class="slider-header"><span>🖥️ Server</span> <span class="slider-dots">○ ● ○</span></div>
+                                <div class="slider-body">
+                                    <button class="btn-slide">◄</button>
+                                    <div class="slide-items">
+                                        <div class="pw-img-slot box">Foto 3<button class="btn-swap">⇄</button></div>
+                                        <div class="pw-img-slot box empty-slot">Kosong<button class="btn-swap" title="Upload Baru">⇄</button></div>
+                                    </div>
+                                    <button class="btn-slide">►</button>
+                                </div>
+                            </div>
+                            <div class="slider-box">
+                                <div class="slider-header"><span>⚡ Elektro</span> <span class="slider-dots">○ ○ ●</span></div>
+                                <div class="slider-body">
+                                    <button class="btn-slide">◄</button>
+                                    <div class="slide-items">
+                                        <div class="pw-img-slot box empty-slot">Kosong<button class="btn-swap">⇄</button></div>
+                                        <div class="pw-img-slot box empty-slot">Kosong<button class="btn-swap">⇄</button></div>
+                                    </div>
+                                    <button class="btn-slide">►</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pw-section">
+                        <div class="pw-title">Section: Experience (Dokumentasi PKL)</div>
+                        <div class="slider-container">
+                            <div class="slider-box" style="border-color: #eab308;">
+                                <div class="slider-header" style="color: #eab308;"><span>🏢 PKL 1</span> <span class="slider-dots">● ○</span></div>
+                                <div class="slider-body">
+                                    <button class="btn-slide">◄</button>
+                                    <div class="slide-items">
+                                        <div class="pw-img-slot box">Dokum 1<button class="btn-swap">⇄</button></div>
+                                        <div class="pw-img-slot box">Dokum 2<button class="btn-swap">⇄</button></div>
+                                    </div>
+                                    <button class="btn-slide">►</button>
+                                </div>
+                            </div>
+                            <div class="slider-box" style="border-color: #eab308;">
+                                <div class="slider-header" style="color: #eab308;"><span>🏢 PKL 2</span> <span class="slider-dots">● ○</span></div>
+                                <div class="slider-body">
+                                    <button class="btn-slide">◄</button>
+                                    <div class="slide-items">
+                                        <div class="pw-img-slot box">Dokum 1<button class="btn-swap">⇄</button></div>
+                                        <div class="pw-img-slot box empty-slot">Kosong<button class="btn-swap">⇄</button></div>
+                                    </div>
+                                    <button class="btn-slide">►</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pw-section">
+                        <div class="pw-title">Section: Tools & Tech Stack</div>
+                        <div class="pw-flex">
+                            <div class="pw-img-slot box">Debian <button class="btn-swap">⇄</button></div>
+                            <div class="pw-img-slot box">Mikrotik <button class="btn-swap">⇄</button></div>
+                            <button class="btn-add">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TEXTWEB (YANG DIPERBAIKI) ==================== -->
+            <div class="tab-content" id="tab-TextWeb">
+                <div style="padding: 15px;">
+                    <h2 style="font-size: 16px; margin-bottom: 6px; color: #fff;">📝 Content Editor</h2>
+                    <p style="font-size: 11px; color: #666; margin-bottom: 20px;">Semua teks di bawah merepresentasikan data yang tampil di index.html</p>
+                    
+                    <div class="card-container">
+
+                        <!-- ── LABEL: HERO SECTION ── -->
+                        <div class="textweb-section-label">▸ Hero Section (#home)</div>
+
+                        <!-- Card: Hero Texts -->
+                        <div class="card card-half">
+                            <div class="card-title">🚀 Hero — Teks Utama</div>
+                            <div class="form-group">
+                                <label>Greeting (teks sebelum nama)</label>
+                                <input type="text" class="form-input" value="Hello, I'm">
+                            </div>
+                            <div class="form-group">
+                                <label>Nama Lengkap (ditampilkan besar)</label>
+                                <input type="text" class="form-input" value="Muhammad Bintang Izzra Wahyudi">
+                            </div>
+                            <div class="form-group">
+                                <label>Tagline / Role</label>
+                                <input type="text" class="form-input" value="Network & Server Administrator">
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan Hero</button>
+                        </div>
+
+                        <!-- Card: Hero CTA Buttons -->
+                        <div class="card card-half">
+                            <div class="card-title">🔘 Hero — Tombol CTA</div>
+                            <div class="form-group">
+                                <label>Tombol Primer (teks)</label>
+                                <input type="text" class="form-input" value="Lihat Portofolio">
+                            </div>
+                            <div class="form-group">
+                                <label>Tombol Sekunder (teks)</label>
+                                <input type="text" class="form-input" value="Download CV">
+                            </div>
+                            <div class="form-group">
+                                <label>Link Download CV</label>
+                                <input type="text" class="form-input" value="./assets/cv/cv-bintangizzra.pdf">
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan CTA</button>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: ABOUT SECTION ── -->
+                        <div class="textweb-section-label">▸ About Section (#about)</div>
+
+                        <!-- Card: About Me -->
+                        <div class="card card-half">
+                            <div class="card-title">👤 About Me</div>
+                            <div class="form-group">
+                                <label>Nama (Heading About)</label>
+                                <input type="text" class="form-input" value="Muhammad Bintang Izzra Wahyudi">
+                            </div>
+                            <div class="form-group">
+                                <label>Deskripsi / Bio Lengkap</label>
+                                <textarea class="form-input" style="min-height: 150px;">Saya adalah Network & Server Administrator yang berfokus pada infrastruktur Linux, virtualisasi, dan optimalisasi jaringan. Memiliki minat mendalam pada otomasi server dan implementasi teknologi IoT. Berpengalaman dalam menangani perangkat keras jaringan, pemeliharaan sistem, serta memberikan dukungan teknis di lingkungan industri skala besar.</textarea>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan About</button>
+                        </div>
+
+                        <!-- Card: Contact & Socials -->
+                        <div class="card card-half">
+                            <div class="card-title">📞 Contact & Socials</div>
+                            <div class="form-group">
+                                <label>Email Utama</label>
+                                <input type="email" class="form-input" value="wahyudibintang209@gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat Domisili</label>
+                                <input type="text" class="form-input" value="Cibinong, Jawa Barat, Indonesia">
+                            </div>
+                            <div class="form-group">
+                                <label>LinkedIn URL</label>
+                                <input type="text" class="form-input" value="https://linkedin.com/in/bintangizzr">
+                            </div>
+                            <div class="form-group">
+                                <label>GitHub URL</label>
+                                <input type="text" class="form-input" value="https://github.com/bintangizzr">
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan Kontak</button>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: SKILLS SECTION ── -->
+                        <div class="textweb-section-label">▸ Skills Section (#skills)</div>
+
+                        <!-- Card: Skills Editor -->
+                        <div class="card card-full">
+                            <div class="card-title">📊 Skills — Nama & Persentase</div>
+                            <div id="skillsEditor">
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="Network Administration"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="90" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="Linux Server"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="85" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="Virtualization (Proxmox)"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="80" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="Troubleshooting Hardware"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="75" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="IoT & Embedded System"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="70" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                                <div class="skill-editor-row">
+                                    <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="MikroTik Configuration"></div>
+                                    <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="88" min="0" max="100"></div>
+                                    <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+                                </div>
+                            </div>
+                            <button class="btn-add-skill" onclick="addSkillRow()">+ Tambah Skill Baru</button>
+                            <div style="margin-top: 12px;">
+                                <button class="btn-save" onclick="showToast()">Simpan Semua Skills</button>
+                            </div>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: KOMPETENSI SECTION ── -->
+                        <div class="textweb-section-label">▸ Kompetensi Section (#kompetensi)</div>
+
+                        <!-- Card: Kompetensi Network -->
+                        <div class="card card-third">
+                            <div class="card-title" style="color:#6c8ead;">🌐 Kompetensi — Network</div>
+                            <div class="form-group">
+                                <label>Judul</label>
+                                <input type="text" class="form-input" value="Network Engineering">
+                            </div>
+                            <div class="form-group">
+                                <label>Deskripsi</label>
+                                <textarea class="form-input" style="min-height: 120px;">Menguasai konfigurasi perangkat jaringan Mikrotik, manajemen VLAN, routing dinamis dan statis, serta pemasangan dan optimasi jaringan fiber optic. Berpengalaman dalam mendesain topologi jaringan skala kecil hingga menengah.</textarea>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan</button>
+                        </div>
+
+                        <!-- Card: Kompetensi Server -->
+                        <div class="card card-third">
+                            <div class="card-title" style="color:#6e9c87;">🖥️ Kompetensi — Server</div>
+                            <div class="form-group">
+                                <label>Judul</label>
+                                <input type="text" class="form-input" value="Server Administration">
+                            </div>
+                            <div class="form-group">
+                                <label>Deskripsi</label>
+                                <textarea class="form-input" style="min-height: 120px;">Terampil dalam administrasi server berbasis Linux (Debian & Ubuntu), implementasi virtualisasi menggunakan Proxmox VE, serta manajemen layanan server seperti web server, DNS, dan DHCP. Memahami konsep containerization dan otomasi deployment.</textarea>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan</button>
+                        </div>
+
+                        <!-- Card: Kompetensi Elektro -->
+                        <div class="card card-third">
+                            <div class="card-title" style="color:#a08cb0;">⚡ Kompetensi — Elektro</div>
+                            <div class="form-group">
+                                <label>Judul</label>
+                                <input type="text" class="form-input" value="Electronics & IoT">
+                            </div>
+                            <div class="form-group">
+                                <label>Deskripsi</label>
+                                <textarea class="form-input" style="min-height: 120px;">Mampu melakukan soldering komponen SMD dan through-hole, desain PCB sederhana, serta merancang sistem IoT menggunakan mikrokontroler. Berpengalaman dalam troubleshooting rangkaian elektronik dan integrasi sensor.</textarea>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan</button>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: EXPERIENCE / PKL SECTION ── -->
+                        <div class="textweb-section-label">▸ Experience Section (#experience)</div>
+
+                        <!-- Card: PKL 1 -->
+                        <div class="card card-full">
+                            <div class="card-title" style="color: #eab308;">🏢 PKL 1 — PT Solusi Bangun Indonesia Tbk</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label>Posisi / Jabatan</label>
+                                    <input type="text" class="form-input" value="IT Support Intern">
+                                </div>
+                                <div class="form-group">
+                                    <label>Periode</label>
+                                    <input type="text" class="form-input" value="Juni 2024 — Agustus 2024">
+                                </div>
+                                <div class="form-group">
+                                    <label>Lokasi</label>
+                                    <input type="text" class="form-input" value="Plant Citeureup, Bogor">
+                                </div>
+                                <div class="form-group">
+                                    <label>Divisi</label>
+                                    <input type="text" class="form-input" value="Department IT Infrastructure">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Overview / Deskripsi Umum</label>
+                                <textarea class="form-input" style="min-height: 90px;">Melaksanakan program Praktik Kerja Lapangan (PKL) di departemen IT Infrastructure PT Solusi Bangun Indonesia Tbk, fokus pada dukungan teknis infrastruktur TI, pemeliharaan perangkat keras, dan manajemen jaringan lokal di lingkungan pabrik.</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kegiatan / Tugas (Bullet Points)</label>
+                                <div class="bullet-editor" id="pkl1Bullets">
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Melakukan instalasi Windows 11 & aplikasi standar perusahaan pada unit PC/Laptop baru"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Pemeliharaan rutin hardware PC, Laptop, dan Printer di seluruh area kantor dan pabrik"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Setup dan konfigurasi Access Point untuk ekspansi jaringan Wi-Fi gedung pabrik"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Manajemen troubleshooting jaringan lokal (LAN) dan perangkat audio-visual ruang meeting"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                </div>
+                                <button class="btn-add-bullet" onclick="addBulletRow('pkl1Bullets')">+ Tambah kegiatan</button>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan PKL 1</button>
+                        </div>
+
+                        <!-- Card: PKL 2 -->
+                        <div class="card card-full">
+                            <div class="card-title" style="color: #eab308;">🏢 PKL 2 — PT Indonusa Telemedia (Transvision)</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label>Posisi / Jabatan</label>
+                                    <input type="text" class="form-input" value="IT Server Intern">
+                                </div>
+                                <div class="form-group">
+                                    <label>Periode</label>
+                                    <input type="text" class="form-input" value="September 2024 — November 2024">
+                                </div>
+                                <div class="form-group">
+                                    <label>Lokasi</label>
+                                    <input type="text" class="form-input" value="Jakarta Selatan">
+                                </div>
+                                <div class="form-group">
+                                    <label>Divisi</label>
+                                    <input type="text" class="form-input" value="Division IT Server & Satellite Infrastructure">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Overview / Deskripsi Umum</label>
+                                <textarea class="form-input" style="min-height: 90px;">Melaksanakan PKL di divisi IT Server PT Indonusa Telemedia (Transvision), terlibat langsung dalam pemeliharaan server siaran, monitoring infrastruktur jaringan satelit, dan implementasi sistem monitoring untuk meningkatkan efisiensi operasional.</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kegiatan / Tugas (Bullet Points)</label>
+                                <div class="bullet-editor" id="pkl2Bullets">
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Maintenance dan pengecekan rutin perangkat Server siaran dan transmisi"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Monitoring performa perangkat jaringan dan infrastruktur satelit menggunakan tools dedicated"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                    <div class="bullet-row"><span class="bullet-dot"></span><input type="text" class="form-input" value="Instalasi dan konfigurasi software monitoring untuk efisiensi operasional IT Server"><button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button></div>
+                                </div>
+                                <button class="btn-add-bullet" onclick="addBulletRow('pkl2Bullets')">+ Tambah kegiatan</button>
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan PKL 2</button>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: SERTIFIKAT SECTION ── -->
+                        <div class="textweb-section-label">▸ Sertifikat Section (#sertifikat)</div>
+
+                        <!-- Card: Sertifikat Editor -->
+                        <div class="card card-full">
+                            <div class="card-title">🏆 Sertifikat</div>
+                            <div id="certEditor">
+                                <div class="cert-editor-row">
+                                    <div class="cert-editor-header"><span>Sertifikat #1</span><button class="btn-remove-bullet" onclick="this.closest('.cert-editor-row').remove()" style="font-size:12px;">Hapus</button></div>
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px;">
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Judul Sertifikat</label><input type="text" class="form-input" value="MikroTik Certified Network Associate (MTCNA)"></div>
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Organisasi</label><input type="text" class="form-input" value="MikroTik"></div>
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Tahun</label><input type="text" class="form-input" value="2024"></div>
+                                    </div>
+                                </div>
+                                <div class="cert-editor-row">
+                                    <div class="cert-editor-header"><span>Sertifikat #2</span><button class="btn-remove-bullet" onclick="this.closest('.cert-editor-row').remove()" style="font-size:12px;">Hapus</button></div>
+                                    <div style="display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px;">
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Judul Sertifikat</label><input type="text" class="form-input" value="Debian Linux System Administration"></div>
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Organisasi</label><input type="text" class="form-input" value="Linux Foundation"></div>
+                                        <div class="form-group"><label style="font-size:10px;color:#666;">Tahun</label><input type="text" class="form-input" value="2024"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn-add-bullet" onclick="addCertRow()" style="margin-top: 4px;">+ Tambah Sertifikat</button>
+                            <div style="margin-top: 12px;">
+                                <button class="btn-save" onclick="showToast()">Simpan Semua Sertifikat</button>
+                            </div>
+                        </div>
+
+                        <div class="textweb-divider"></div>
+
+                        <!-- ── LABEL: FOOTER ── -->
+                        <div class="textweb-section-label">▸ Footer</div>
+
+                        <!-- Card: Footer -->
+                        <div class="card card-half">
+                            <div class="card-title">📌 Footer — Teks</div>
+                            <div class="form-group">
+                                <label>Brand Text (Logo Text)</label>
+                                <input type="text" class="form-input" value="bintangizzra">
+                            </div>
+                            <div class="form-group">
+                                <label>Copyright Text</label>
+                                <input type="text" class="form-input" value="© 2025 Muhammad Bintang Izzra Wahyudi. All rights reserved.">
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan Footer</button>
+                        </div>
+
+                        <!-- Card: Navbar -->
+                        <div class="card card-half">
+                            <div class="card-title">📌 Navbar — Menu Items</div>
+                            <div class="form-group">
+                                <label>Menu 1</label>
+                                <input type="text" class="form-input" value="Home">
+                            </div>
+                            <div class="form-group">
+                                <label>Menu 2</label>
+                                <input type="text" class="form-input" value="About">
+                            </div>
+                            <div class="form-group">
+                                <label>Menu 3</label>
+                                <input type="text" class="form-input" value="Skills">
+                            </div>
+                            <div class="form-group">
+                                <label>Menu 4</label>
+                                <input type="text" class="form-input" value="Kompetensi">
+                            </div>
+                            <div class="form-group">
+                                <label>Menu 5</label>
+                                <input type="text" class="form-input" value="Experience">
+                            </div>
+                            <div class="form-group">
+                                <label>Menu 6</label>
+                                <input type="text" class="form-input" value="Sertifikat">
+                            </div>
+                            <button class="btn-save" onclick="showToast()">Simpan Navbar</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== GALLERY ==================== -->
+            <div class="tab-content" id="tab-Gallery">
+                <div style="padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="font-size: 16px; color: #fff;">📂 Media Library (Auto-Convert to .webp)</h2>
+                        <span style="font-size: 12px; color: #aaa;">Storage: /storage/app/public/</span>
+                    </div>
+                    <div class="gallery-grid">
+                        <div class="gallery-item upload-card" onclick="alert('Dialog Upload File Terbuka...')">
+                            <span>☁️</span>
+                            <div class="gallery-name">Upload Baru</div>
+                        </div>
+                        <div class="gallery-item">
+                            <span>🖼️</span>
+                            <div class="gallery-name">foto-profil.webp</div>
+                        </div>
+                        <div class="gallery-item">
+                            <span>🖼️</span>
+                            <div class="gallery-name">sertif-mikrotik.webp</div>
+                        </div>
+                        <div class="gallery-item">
+                            <span>🖼️</span>
+                            <div class="gallery-name">debian-server.webp</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <span>PERSONAL EDITION - Administrator: adminizzra</span>
+        <span>Connected via Cloudflare Tunnels</span>
+    </footer>
+
+    <script>
+        // Set waktu login
+        document.getElementById('time').innerText = new Date().toString().slice(0, 24);
+
+        // Fungsi Ganti Tab
+        function openTab(tabName, element) {
+            document.querySelectorAll('.folder-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            let headerText = '1. 10.10.10.65 (root)';
+            let icon = '🐧';
+            if(tabName === 'PicWeb') { headerText = 'Visual Editor - PicWeb'; icon = '🖼️'; }
+            if(tabName === 'TextWeb') { headerText = 'Text Editor - TextWeb'; icon = '📝'; }
+            if(tabName === 'Gallery') { headerText = 'Media Storage - Gallery'; icon = '📂'; }
+            document.getElementById('tabHead-Beranda').innerHTML = '<span>' + icon + '</span> ' + headerText;
+        }
+
+        // Maintenance Toggle
+        let isMaintenance = false;
+        function toggleMaintenance() {
+            isMaintenance = !isMaintenance;
+            const btn = document.getElementById('btnMaintenance');
+            const text = document.getElementById('maintenanceText');
+            if(isMaintenance) {
+                btn.classList.add('active');
+                text.innerText = 'Web Locked (MAINTENANCE)';
+                alert('Peringatan: Website dikunci! Publik dialihkan ke halaman 503.');
+            } else {
+                btn.classList.remove('active');
+                text.innerText = 'Tunneling (ON)';
+                alert('Website dibuka kembali untuk publik.');
+            }
+        }
+
+        // Toast Notification
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Tambah Skill Row
+        function addSkillRow() {
+            const container = document.getElementById('skillsEditor');
+            const row = document.createElement('div');
+            row.className = 'skill-editor-row';
+            row.innerHTML = `
+                <div class="form-group"><label style="font-size:10px;color:#666;">Nama Skill</label><input type="text" class="form-input" value="" placeholder="Nama skill baru..."></div>
+                <div class="form-group pct"><label style="font-size:10px;color:#666;">%</label><input type="number" class="form-input" value="50" min="0" max="100"></div>
+                <button class="btn-remove-skill" onclick="this.parentElement.remove()" title="Hapus">✕</button>
+            `;
+            container.appendChild(row);
+            row.querySelector('input[type="text"]').focus();
+        }
+
+        // Tambah Bullet Row
+        function addBulletRow(containerId) {
+            const container = document.getElementById(containerId);
+            const row = document.createElement('div');
+            row.className = 'bullet-row';
+            row.innerHTML = `
+                <span class="bullet-dot"></span>
+                <input type="text" class="form-input" value="" placeholder="Tambah kegiatan baru...">
+                <button class="btn-remove-bullet" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+            row.querySelector('input').focus();
+        }
+
+        // Tambah Sertifikat Row
+        let certCounter = 3;
+        function addCertRow() {
+            const container = document.getElementById('certEditor');
+            const row = document.createElement('div');
+            row.className = 'cert-editor-row';
+            row.innerHTML = `
+                <div class="cert-editor-header"><span>Sertifikat #${certCounter}</span><button class="btn-remove-bullet" onclick="this.closest('.cert-editor-row').remove()" style="font-size:12px;">Hapus</button></div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 80px; gap: 10px;">
+                    <div class="form-group"><label style="font-size:10px;color:#666;">Judul Sertifikat</label><input type="text" class="form-input" value="" placeholder="Judul sertifikat..."></div>
+                    <div class="form-group"><label style="font-size:10px;color:#666;">Organisasi</label><input type="text" class="form-input" value="" placeholder="Penerbit..."></div>
+                    <div class="form-group"><label style="font-size:10px;color:#666;">Tahun</label><input type="text" class="form-input" value="2025"></div>
+                </div>
+            `;
+            container.appendChild(row);
+            row.querySelector('input[type="text"]').focus();
+            certCounter++;
+        }
+    </script>
+</body>
+</html>
